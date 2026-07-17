@@ -191,7 +191,7 @@ struct CEFeedbackRow: View {
 
     var body: some View {
         let given = viewModel.feedbackGiven[message.id]
-        HStack(spacing: 14) {
+        HStack(spacing: 8) {
             Spacer().frame(width: 26)   // align under bubble, past avatar
             button(.up, systemName: given == .up ? "hand.thumbsup.fill" : "hand.thumbsup",
                    active: given == .up)
@@ -204,26 +204,41 @@ struct CEFeedbackRow: View {
 
     @State private var hoveredUp = false
     @State private var hoveredDown = false
+    @State private var pressedUp = false
+    @State private var pressedDown = false
 
     private func button(_ verdict: CEFeedback.Verdict, systemName: String, active: Bool) -> some View {
         let hovered = verdict == .up ? hoveredUp : hoveredDown
-        return Button {
-            withAnimation(.spring(response: 0.3)) {
-                viewModel.giveFeedback(verdict, for: message)
+        let pressed = verdict == .up ? pressedUp : pressedDown
+        // Genie zoom: pressed (touch) > hovered (pointer) > active (chosen) > rest.
+        let scale: CGFloat = pressed ? 1.4 : (active ? 1.2 : (hovered ? 1.3 : 1))
+        return Image(systemName: systemName)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundColor(active ? theme.accent : (hovered ? theme.accent.opacity(0.85) : .secondary.opacity(0.65)))
+            .frame(width: 34, height: 30)                 // generous touch target
+            .background(
+                Circle().fill(theme.accent.opacity((hovered || pressed) ? 0.12 : 0))
+                    .frame(width: 30, height: 30)
+            )
+            .scaleEffect(scale)
+            .contentShape(Rectangle())
+            .animation(.spring(response: 0.3, dampingFraction: 0.5), value: scale)
+            .onHover { h in
+                if verdict == .up { hoveredUp = h } else { hoveredDown = h }
             }
-        } label: {
-            Image(systemName: systemName)
-                .font(.system(size: 12))
-                .foregroundColor(active ? theme.accent : (hovered ? theme.accent.opacity(0.8) : .secondary.opacity(0.6)))
-                // Genie zoom on hover.
-                .scaleEffect(active ? 1.2 : (hovered ? 1.3 : 1))
-                .animation(.spring(response: 0.3, dampingFraction: 0.55), value: hovered)
-                .animation(.spring(response: 0.3), value: active)
-        }
-        .buttonStyle(.plain)
-        .onHover { h in
-            if verdict == .up { hoveredUp = h } else { hoveredDown = h }
-        }
-        .disabled(viewModel.feedbackGiven[message.id] != nil)
+            // A touch-friendly press that visibly zooms on tap-down, then registers on release.
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        guard viewModel.feedbackGiven[message.id] == nil else { return }
+                        if verdict == .up { pressedUp = true } else { pressedDown = true }
+                    }
+                    .onEnded { _ in
+                        if verdict == .up { pressedUp = false } else { pressedDown = false }
+                        guard viewModel.feedbackGiven[message.id] == nil else { return }
+                        viewModel.giveFeedback(verdict, for: message)
+                    }
+            )
+            .allowsHitTesting(viewModel.feedbackGiven[message.id] == nil || active)
     }
 }

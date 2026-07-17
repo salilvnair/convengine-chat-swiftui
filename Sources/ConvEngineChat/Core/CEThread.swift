@@ -74,8 +74,11 @@ struct CEThread: View {
     }
 }
 
-/// Assistant bubble + feedback row that reveals on hover (pointer devices) or tap (touch),
-/// with a soft scale-in animation. The last message shows feedback by default.
+/// Assistant bubble + feedback row.
+///
+/// The feedback row is always present (touch devices can't hover), but rests dim/compact and
+/// brightens + lifts when the bubble is hovered (pointer devices) or when it's the latest reply.
+/// Each thumb has a spring press-scale (touch) AND a hover zoom (pointer) — the genie effect.
 private struct CEAssistantMessageRow: View {
     let message: CEMessage
     let theme: CETheme
@@ -83,32 +86,27 @@ private struct CEAssistantMessageRow: View {
     @ObservedObject var viewModel: CEChatViewModel
 
     @State private var hovering = false
-    @State private var tapped = false
 
     private var isLast: Bool {
         viewModel.messages.last(where: { $0.role == .assistant && $0.state == .complete })?.id == message.id
     }
-    private var showFeedback: Bool {
-        config.showFeedback && message.state == .complete && (hovering || tapped || isLast)
-    }
+    /// Active = latest message or currently hovered → full opacity. Otherwise a quiet resting state.
+    private var active: Bool { hovering || isLast }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 3) {
             CEAssistantBubble(message: message, theme: theme,
                               avatarSystemImage: config.avatarSystemImage)
-                // Genie-style subtle zoom on hover.
-                .scaleEffect(hovering ? 1.015 : 1.0, anchor: .leading)
-                .animation(.spring(response: 0.35, dampingFraction: 0.7), value: hovering)
-                .onTapGesture { withAnimation(.spring(response: 0.3)) { tapped.toggle() } }
+                .scaleEffect(hovering ? 1.012 : 1.0, anchor: .leading)
 
-            if showFeedback {
+            if config.showFeedback && message.state == .complete {
                 CEFeedbackRow(message: message, theme: theme, viewModel: viewModel)
-                    .transition(.scale(scale: 0.6, anchor: .leading).combined(with: .opacity))
+                    .opacity(active ? 1 : 0.45)
+                    .scaleEffect(active ? 1 : 0.92, anchor: .leading)
             }
         }
-        .onHover { h in
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) { hovering = h }
-        }
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: showFeedback)
+        .onHover { h in hovering = h }
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: hovering)
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: active)
     }
 }
