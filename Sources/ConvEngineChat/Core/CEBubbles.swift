@@ -30,21 +30,14 @@ struct CEAssistantBubble: View {
     let theme: CETheme
     let avatarSystemImage: String
 
-    private var attributed: AttributedString {
-        (try? AttributedString(markdown: message.text,
-                               options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
-        ?? AttributedString(message.text)
-    }
-
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             CEAvatar(systemImage: avatarSystemImage, theme: theme, size: 26)
                 .padding(.top, 2)
 
-            HStack(alignment: .bottom, spacing: 2) {
-                Text(attributed)
-                    .font(theme.messageFont)
-                    .foregroundColor(theme.bubbleAgentText)
+            VStack(alignment: .leading, spacing: 6) {
+                // Rich markdown rendering (MDViewer-style) — headings, lists, code, quotes.
+                CEMarkdown(text: message.text, theme: theme)
                     .textSelection(.enabled)
                 if case .streaming = message.state {
                     CEStreamingCursor(theme: theme)
