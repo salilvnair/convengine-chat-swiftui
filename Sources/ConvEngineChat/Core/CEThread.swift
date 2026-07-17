@@ -60,14 +60,8 @@ struct CEThread: View {
                     Spacer(minLength: 40)
                 }
             } else {
-                VStack(alignment: .leading, spacing: 0) {
-                    CEAssistantBubble(message: message, theme: theme,
-                                      avatarSystemImage: config.avatarSystemImage)
-                    if config.showFeedback, message.state == .complete,
-                       message.id == lastCompletedAssistantId {
-                        CEFeedbackRow(message: message, theme: theme, viewModel: viewModel)
-                    }
-                }
+                CEAssistantMessageRow(message: message, theme: theme, config: config,
+                                      viewModel: viewModel)
             }
 
         case .system:
@@ -77,5 +71,44 @@ struct CEThread: View {
 
     private var lastCompletedAssistantId: UUID? {
         viewModel.messages.last(where: { $0.role == .assistant && $0.state == .complete })?.id
+    }
+}
+
+/// Assistant bubble + feedback row that reveals on hover (pointer devices) or tap (touch),
+/// with a soft scale-in animation. The last message shows feedback by default.
+private struct CEAssistantMessageRow: View {
+    let message: CEMessage
+    let theme: CETheme
+    let config: CEConfig
+    @ObservedObject var viewModel: CEChatViewModel
+
+    @State private var hovering = false
+    @State private var tapped = false
+
+    private var isLast: Bool {
+        viewModel.messages.last(where: { $0.role == .assistant && $0.state == .complete })?.id == message.id
+    }
+    private var showFeedback: Bool {
+        config.showFeedback && message.state == .complete && (hovering || tapped || isLast)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            CEAssistantBubble(message: message, theme: theme,
+                              avatarSystemImage: config.avatarSystemImage)
+                // Genie-style subtle zoom on hover.
+                .scaleEffect(hovering ? 1.015 : 1.0, anchor: .leading)
+                .animation(.spring(response: 0.35, dampingFraction: 0.7), value: hovering)
+                .onTapGesture { withAnimation(.spring(response: 0.3)) { tapped.toggle() } }
+
+            if showFeedback {
+                CEFeedbackRow(message: message, theme: theme, viewModel: viewModel)
+                    .transition(.scale(scale: 0.6, anchor: .leading).combined(with: .opacity))
+            }
+        }
+        .onHover { h in
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) { hovering = h }
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: showFeedback)
     }
 }

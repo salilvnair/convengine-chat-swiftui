@@ -202,18 +202,28 @@ struct CEFeedbackRow: View {
         .padding(.top, 2)
     }
 
+    @State private var hoveredUp = false
+    @State private var hoveredDown = false
+
     private func button(_ verdict: CEFeedback.Verdict, systemName: String, active: Bool) -> some View {
-        Button {
+        let hovered = verdict == .up ? hoveredUp : hoveredDown
+        return Button {
             withAnimation(.spring(response: 0.3)) {
                 viewModel.giveFeedback(verdict, for: message)
             }
         } label: {
             Image(systemName: systemName)
                 .font(.system(size: 12))
-                .foregroundColor(active ? theme.accent : .secondary.opacity(0.6))
-                .scaleEffect(active ? 1.15 : 1)
+                .foregroundColor(active ? theme.accent : (hovered ? theme.accent.opacity(0.8) : .secondary.opacity(0.6)))
+                // Genie zoom on hover.
+                .scaleEffect(active ? 1.2 : (hovered ? 1.3 : 1))
+                .animation(.spring(response: 0.3, dampingFraction: 0.55), value: hovered)
+                .animation(.spring(response: 0.3), value: active)
         }
         .buttonStyle(.plain)
+        .onHover { h in
+            if verdict == .up { hoveredUp = h } else { hoveredDown = h }
+        }
         .disabled(viewModel.feedbackGiven[message.id] != nil)
     }
 }
