@@ -42,20 +42,36 @@ struct MyEngine: CEChatEngine {
     }
 }
 
-// 2. Configure + present.
+// 2. Configure + present (library owns the state).
 struct ChatScreen: View {
     var body: some View {
         var config = CEConfig()
         config.title = "My Assistant"
-        config.subtitle = "Ask me anything."
-        config.chips = [
-            CEChip("What can you do?"),
-            CEChip("Summarize my day")
-        ]
-        return ConvEngineChatView(engine: MyEngine(), config: config)
+        config.chips = [CEChip("What can you do?")]
+        return ConvEngineChat(engine: MyEngine(), config: config)
     }
 }
 ```
+
+### Host-owned state (read/write the chat from outside)
+
+When you need to reach the chat — e.g. a mic button that types into the composer —
+own the view model yourself as a `@StateObject` and use `ConvEngineChatView`:
+
+```swift
+struct ChatScreen: View {
+    @StateObject private var chat = CEChatViewModel(engine: MyEngine(), config: CEConfig())
+
+    var body: some View {
+        ConvEngineChatView(viewModel: chat, config: CEConfig())
+            .toolbar { Button("Mic") { chat.input = "typed by mic" } }
+    }
+}
+```
+
+> `CEChatViewModel.rebindEngine(_:)` swaps the engine after construction — handy when
+> the `@StateObject` is created before your app's dependencies (environment objects) exist,
+> then wired up in `.onAppear`.
 
 ## Streaming
 

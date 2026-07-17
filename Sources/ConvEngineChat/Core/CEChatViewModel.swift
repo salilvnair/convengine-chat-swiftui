@@ -8,7 +8,7 @@ public final class CEChatViewModel: ObservableObject {
     @Published public private(set) var isTyping = false
     @Published var feedbackGiven: [UUID: CEFeedback.Verdict] = [:]
 
-    let engine: CEChatEngine
+    private(set) var engine: CEChatEngine
     let config: CEConfig
 
     private var currentTask: Task<Void, Never>?
@@ -16,6 +16,13 @@ public final class CEChatViewModel: ObservableObject {
     public init(engine: CEChatEngine, config: CEConfig) {
         self.engine = engine
         self.config = config
+    }
+
+    /// Swap the engine after construction. Useful when the view model is created as a
+    /// `@StateObject` (before the app's environment/dependencies are available) and the
+    /// real engine is wired in `.onAppear`.
+    public func rebindEngine(_ engine: CEChatEngine) {
+        self.engine = engine
     }
 
     public var isEmpty: Bool { messages.isEmpty }
