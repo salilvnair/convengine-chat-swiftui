@@ -9,11 +9,19 @@ import MarkdownUI
 /// images, links, strikethrough, and (the thing that started this) **tables** —
 /// rather than a hand-rolled block parser. We only map `CETheme`'s design tokens
 /// onto a `MarkdownUI.Theme` so the rendering matches the surrounding chat UI.
-struct CEMarkdown: View {
+///
+/// Public so hosts can reuse the exact same styled renderer for AI text outside the
+/// chat (advisor cards, explanations, narratives) — `CEMarkdown(text:theme:)`.
+public struct CEMarkdown: View {
     let text: String
     let theme: CETheme
 
-    var body: some View {
+    public init(text: String, theme: CETheme = .default) {
+        self.text = text
+        self.theme = theme
+    }
+
+    public var body: some View {
         Markdown(text)
             .markdownTheme(markdownTheme)
             .markdownTextStyle {
@@ -36,8 +44,14 @@ struct CEMarkdown: View {
             .text {
                 ForegroundColor(theme.bubbleAgentText)
             }
+            // Colorful pop: **bold** keywords render in the accent — the "cool" look.
             .strong {
-                FontWeight(.semibold)
+                FontWeight(.bold)
+                ForegroundColor(theme.accent)
+            }
+            .emphasis {
+                FontStyle(.italic)
+                ForegroundColor(theme.accent.opacity(0.85))
             }
             .link {
                 ForegroundColor(theme.accent)
@@ -67,17 +81,17 @@ struct CEMarkdown: View {
             .heading1 { configuration in
                 configuration.label
                     .markdownMargin(top: 8, bottom: 4)
-                    .markdownTextStyle { FontSize(.em(1.4)); FontWeight(.heavy) }
+                    .markdownTextStyle { FontSize(.em(1.4)); FontWeight(.heavy); ForegroundColor(theme.accent) }
             }
             .heading2 { configuration in
                 configuration.label
                     .markdownMargin(top: 6, bottom: 4)
-                    .markdownTextStyle { FontSize(.em(1.2)); FontWeight(.bold) }
+                    .markdownTextStyle { FontSize(.em(1.2)); FontWeight(.bold); ForegroundColor(theme.accent) }
             }
             .heading3 { configuration in
                 configuration.label
                     .markdownMargin(top: 4, bottom: 2)
-                    .markdownTextStyle { FontSize(.em(1.05)); FontWeight(.bold) }
+                    .markdownTextStyle { FontSize(.em(1.05)); FontWeight(.bold); ForegroundColor(theme.accent) }
             }
             .blockquote { configuration in
                 HStack(spacing: 8) {
