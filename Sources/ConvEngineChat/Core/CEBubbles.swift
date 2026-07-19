@@ -11,6 +11,7 @@ struct CEUserBubble: View {
             Text(message.text)
                 .font(theme.messageFont)
                 .foregroundColor(theme.bubbleUserText)
+                .textSelection(.enabled)
                 .padding(.horizontal, 14).padding(.vertical, 10)
                 .background(
                     LinearGradient(colors: theme.resolvedGradient,
@@ -18,6 +19,7 @@ struct CEUserBubble: View {
                 )
                 .clipShape(CEBubbleShape(radius: theme.bubbleCornerRadius, tail: .trailing))
                 .shadow(color: theme.accent.opacity(0.25), radius: 6, y: 3)
+                .ceMessageActions(message.text)
         }
         .transition(.asymmetric(insertion: .move(edge: .bottom).combined(with: .opacity),
                                 removal: .opacity))
@@ -50,6 +52,7 @@ struct CEAssistantBubble: View {
                 CEBubbleShape(radius: theme.bubbleCornerRadius, tail: .leading)
                     .stroke(Color.primary.opacity(0.06), lineWidth: 0.5)
             )
+            .ceMessageActions(message.text)
 
             Spacer(minLength: 40)
         }
@@ -88,6 +91,46 @@ struct CEFailedBubble: View {
         }
     }
 }
+
+// MARK: - Long-press message actions
+
+extension View {
+    /// iMessage-style long-press menu on a chat bubble: Copy the whole message + Share.
+    /// Works on both plain-text (user) and Markdown-rendered (assistant) bubbles, where
+    /// per-character `.textSelection` isn't always honored.
+    func ceMessageActions(_ text: String) -> some View {
+        contextMenu {
+            Button {
+                CEPasteboard.copy(text)
+            } label: {
+                Label("Copy", systemImage: "doc.on.doc")
+            }
+            #if canImport(UIKit)
+            ShareLink(item: text) {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
+            #endif
+        }
+    }
+}
+
+/// Cross-platform clipboard write (package also compiles on macOS).
+enum CEPasteboard {
+    static func copy(_ text: String) {
+        #if canImport(UIKit)
+        UIPasteboard.general.string = text
+        #elseif canImport(AppKit)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        #endif
+    }
+}
+
+#if canImport(UIKit)
+import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 /// Rounded-rect bubble with one squared-off corner as the "tail".
 struct CEBubbleShape: Shape {
