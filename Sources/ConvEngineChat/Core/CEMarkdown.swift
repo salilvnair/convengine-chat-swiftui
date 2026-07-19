@@ -87,6 +87,9 @@ struct CEMarkdown: View {
             }
             .padding(.vertical, 2)
 
+        case .table(let headers, let rows):
+            CEMarkdownTable(headers: headers, rows: rows, theme: theme, inline: inline)
+
         case .rule:
             Divider().padding(.vertical, 2)
         }
@@ -132,6 +135,7 @@ enum CEMarkdownBlock {
     case numberedList([String])
     case codeBlock(code: String, lang: String?)
     case quote(String)
+    case table(headers: [String], rows: [[String]])
     case rule
 }
 
@@ -179,6 +183,24 @@ enum CEMarkdownParser {
                 let content = String(trimmed[hash.upperBound...])
                 blocks.append(.heading(level: min(level, 6), content: content))
                 i += 1; continue
+            }
+
+            // GFM table: a row containing `|`, immediately followed by a separator row (---).
+            if trimmed.contains("|"),
+               i + 1 < lines.count,
+               isSeparatorRow(lines[i + 1]) {
+                flushParagraph()
+                let headers = splitRow(trimmed)
+                var rows: [[String]] = []
+                i += 2   // skip header + separator
+                while i < lines.count {
+                    let rowLine = lines[i].trimmingCharacters(in: .whitespaces)
+                    guard rowLine.contains("|"), !rowLine.isEmpty else { break }
+                    rows.append(splitRow(rowLine))
+                    i += 1
+                }
+                blocks.append(.table(headers: headers, rows: rows))
+                continue
             }
 
             // Blockquote
@@ -231,5 +253,72 @@ enum CEMarkdownParser {
         }
         flushParagraph()
         return blocks
+    }
+
+    // MARK: - GFM table helpers
+
+    /// A separator row looks like `|---|:--:|---|` (dashes, optional colons, pipes only).
+    static func isSeparatorRow(_ line: String) -> Bool {
+        let t = line.trimmingCharacters(in: .whitespaces)
+        guard t.contains("-"), t.contains("|") else { return false }
+        let stripped = t.replacingOccurrences(of: " ", with: "")
+        return stripped.allSatisfy { "|-:".contains($0) }
+    }
+
+    /// Split a `| a | b | c |` row into trimmed cells (handles missing leading/trailing pipes).
+    static func splitRow(_ line: String) -> [String] {
+        var t = line.trimmingCharacters(in: .whitespaces)
+        if t.hasPrefix("|") { t.removeFirst() }
+        if t.hasSuffix("|") { t.removeLast() }
+        return t.components(separatedBy: "|").map { $0.trimmingCharacters(in: .whitespaces) }
+    }
+}
+
+// MARK: - Table view
+
+/// Renders a GFM table as a real grid — tinted header, zebra rows, horizontal scroll for wide tables.
+private struct CEMarkdownTable: View {
+    let headers: [String]
+    let rows: [[String]]
+    let theme: CETheme
+    let inline: (String) -> Text
+
+    private var columnCount: Int { max(headers.count, rows.map(\.count).max() ?? 0) }
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            VStack(spacing: 0) {
+                // Header
+                HStack(spacing: 0) {
+                    ForEach(0..<columnCount, id: \.self) { c in
+                        cell(headers.indices.contains(c) ? headers[c] : "", bold: true)
+                            .foregroundColor(.white)
+                    }
+                }
+                .background(theme.accent)
+
+                // Rows
+                ForEach(Array(rows.enumerated()), id: \.offset) { idx, row in
+                    HStack(spacing: 0) {
+                        ForEach(0..<columnCount, id: \.self) { c in
+                            cell(row.indices.contains(c) ? row[c] : "", bold: false)
+                        }
+                    }
+                    .background(idx.isMultiple(of: 2) ? Color.primary.opacity(0.03) : Color.clear)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(theme.accent.opacity(0.25), lineWidth: 1))
+        }
+    }
+
+    private func cell(_ text: String, bold: Bool) -> some View {
+        inline(text)
+            .font(.caption.weight(bold ? .bold : .regular))
+            .lineLimit(3)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(minWidth: 80, maxWidth: 220, alignment: .leading)
+            .padding(.horizontal, 10).padding(.vertical, 7)
+            .overlay(Rectangle().frame(width: 0.5).foregroundColor(.primary.opacity(0.08)), alignment: .trailing)
     }
 }

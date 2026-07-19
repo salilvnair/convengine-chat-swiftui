@@ -85,3 +85,28 @@ final class ConvEngineChatTests: XCTestCase {
 }
 
 import SwiftUI
+
+final class CEMarkdownTableTests: XCTestCase {
+    func testParsesGFMTable() {
+        let md = """
+        Here is a table:
+
+        | Card | Balance | Order |
+        |------|---------|-------|
+        | Chase | $6,619 | 1st 📌 |
+        | Amex | $457 | 2nd |
+        """
+        let blocks = CEMarkdownParser.parse(md)
+        guard let table = blocks.compactMap({ b -> (headers: [String], rows: [[String]])? in
+            if case .table(let h, let r) = b { return (h, r) } else { return nil }
+        }).first else { return XCTFail("no table parsed") }
+        XCTAssertEqual(table.headers, ["Card", "Balance", "Order"])
+        XCTAssertEqual(table.rows.count, 2)
+        XCTAssertEqual(table.rows[0], ["Chase", "$6,619", "1st 📌"])
+    }
+
+    func testSeparatorDetection() {
+        XCTAssertTrue(CEMarkdownParser.isSeparatorRow("|------|:---:|---|"))
+        XCTAssertFalse(CEMarkdownParser.isSeparatorRow("| Chase | $10 |"))
+    }
+}
