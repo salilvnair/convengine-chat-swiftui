@@ -26,11 +26,14 @@ struct CEComposer: View {
                 accessory
             }
 
+            // No .onSubmit here on purpose — attaching one hijacks the Return
+            // key into "send" instead of "insert a newline", which defeats
+            // axis: .vertical's whole point. Ditto Claude's iOS app: Return
+            // grows the composer, only the button below actually sends.
             TextField(config.placeholder, text: $viewModel.input, axis: .vertical)
                 .lineLimit(1...5)
                 .font(theme.messageFont)
                 .focused($focused)
-                .onSubmit { viewModel.sendCurrentInput() }
 
             Button {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
