@@ -55,6 +55,13 @@ public struct ConvEngineChatView: View {
             }
         }
         .background(theme.panelBg.ignoresSafeArea())
+        // Tapping outside the composer dismisses the keyboard.
+        .onTapGesture {
+            #if canImport(UIKit)
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder),
+                                            to: nil, from: nil, for: nil)
+            #endif
+        }
         .animation(.spring(response: 0.45, dampingFraction: 0.85), value: viewModel.isEmpty)
     }
 }

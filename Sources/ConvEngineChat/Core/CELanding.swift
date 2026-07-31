@@ -11,7 +11,30 @@ struct CELanding: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Spacer()
+            // The hero scrolls so it can COMPRESS when the keyboard is up.
+            // As a plain VStack + Spacers it was taller than the remaining
+            // space once the keyboard appeared, so the spacers collapsed to
+            // zero and the composer got pushed underneath the keyboard.
+            // GeometryReader's minHeight keeps it centred when there's room.
+            GeometryReader { geo in
+                ScrollView {
+                    hero
+                        .frame(maxWidth: .infinity, minHeight: geo.size.height)
+                }
+                .scrollDismissesKeyboard(.interactively)
+            }
+
+            CEComposer(viewModel: viewModel, config: config, theme: theme)
+                .padding(.horizontal, 16)
+                // 10pt clearance above the keyboard (SwiftUI's automatic
+                // keyboard avoidance moves this whole stack up/down).
+                .padding(.bottom, 10)
+        }
+    }
+
+    private var hero: some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
 
             if config.showLandingAvatar {
                 ZStack {
@@ -52,13 +75,7 @@ struct CELanding: View {
                     .padding(.horizontal, 20)
             }
 
-            Spacer()
-
-            CEComposer(viewModel: viewModel, config: config, theme: theme)
-                .padding(.horizontal, 16)
-                // 10pt clearance above the keyboard (SwiftUI's automatic
-                // keyboard avoidance moves this whole stack up/down).
-                .padding(.bottom, 10)
+            Spacer(minLength: 0)
         }
     }
 

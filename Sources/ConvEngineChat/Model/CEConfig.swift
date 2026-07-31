@@ -19,6 +19,12 @@ public struct CEConfig {
     public var showLandingAvatar: Bool = true
     public var showLandingSubtitle: Bool = true
 
+    // ── Input behaviour ──────────────────────────────────────────────
+    /// Off by default — chat input is rarely prose, and auto-capitalising
+    /// every line fights the user. Opt back in if your assistant wants it.
+    public var autocapitalizesInput: Bool = false
+    public var autocorrectsInput: Bool = false
+
     // ── Appearance ───────────────────────────────────────────────────
     public var composerShape: ComposerShape = .round
     /// SF Symbol for the landing hero + assistant avatar.

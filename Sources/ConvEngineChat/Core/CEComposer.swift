@@ -1,5 +1,19 @@
 import SwiftUI
 
+/// `textInputAutocapitalization` is iOS-family only, so the flag has to be
+/// applied behind a platform check rather than inline on the TextField.
+private struct CEAutocapitalization: ViewModifier {
+    let enabled: Bool
+
+    func body(content: Content) -> some View {
+        #if os(iOS) || os(tvOS) || os(watchOS) || os(visionOS)
+        content.textInputAutocapitalization(enabled ? .sentences : .never)
+        #else
+        content
+        #endif
+    }
+}
+
 /// The message composer — a tall, Claude-style box: the text input sits on
 /// top and grows with content, with the accessory (e.g. mic) and send button
 /// on their own row underneath.
@@ -36,11 +50,29 @@ struct CEComposer: View {
                 .lineLimit(1...8)
                 .font(theme.messageFont)
                 .focused($focused)
+                .autocorrectionDisabled(!config.autocorrectsInput)
+                .modifier(CEAutocapitalization(enabled: config.autocapitalizesInput))
                 .frame(maxWidth: .infinity, minHeight: 56, alignment: .topLeading)
 
             HStack(spacing: 10) {
                 if let accessory = config.composerLeadingAccessory {
                     accessory
+                }
+
+                // Explicit way out of the keyboard, alongside tapping outside.
+                if focused {
+                    Button {
+                        focused = false
+                    } label: {
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.secondary)
+                            .frame(width: 30, height: 30)
+                            .background(Color.secondary.opacity(0.12), in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Dismiss keyboard")
+                    .transition(.scale.combined(with: .opacity))
                 }
 
                 Spacer(minLength: 0)
@@ -81,6 +113,7 @@ struct CEComposer: View {
         // Tapping anywhere in the box focuses the field, not just the one
         // text line — the empty area below it is part of the input surface.
         .onTapGesture { focused = true }
+        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: focused)
         .onAppear { if isFocusedOnAppear { focused = true } }
     }
 }
