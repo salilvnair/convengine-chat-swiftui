@@ -59,22 +59,6 @@ struct CEComposer: View {
                     accessory
                 }
 
-                // Explicit way out of the keyboard, alongside tapping outside.
-                if focused {
-                    Button {
-                        focused = false
-                    } label: {
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundColor(.secondary)
-                            .frame(width: 30, height: 30)
-                            .background(Color.secondary.opacity(0.12), in: Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Dismiss keyboard")
-                    .transition(.scale.combined(with: .opacity))
-                }
-
                 Spacer(minLength: 0)
 
                 Button {
