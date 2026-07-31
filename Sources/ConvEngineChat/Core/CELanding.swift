@@ -56,7 +56,7 @@ struct CELanding: View {
 
             CEComposer(viewModel: viewModel, config: config, theme: theme)
                 .padding(.horizontal, 16)
-                .padding(.bottom, 12)
+                .padding(.bottom, 18)
         }
     }
 
