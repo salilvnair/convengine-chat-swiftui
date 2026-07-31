@@ -49,7 +49,9 @@ public struct ConvEngineChatView: View {
                 CEComposer(viewModel: viewModel, config: config, theme: theme)
                     .padding(.horizontal, 12)
                     .padding(.top, 8)
-                    .padding(.bottom, 14)
+                    // 10pt clearance above the keyboard (SwiftUI's automatic
+                    // keyboard avoidance moves this whole stack up/down).
+                    .padding(.bottom, 10)
             }
         }
         .background(theme.panelBg.ignoresSafeArea())
