@@ -10,10 +10,6 @@ struct CEComposer: View {
 
     @FocusState private var focused: Bool
 
-    // ~1 line and ~5 lines at the message font.
-    private let minHeight: CGFloat = 22
-    private let maxHeight: CGFloat = 120
-
     private var canSend: Bool {
         !viewModel.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         && !viewModel.isTyping
@@ -30,31 +26,15 @@ struct CEComposer: View {
                 accessory
             }
 
-            ZStack(alignment: .topLeading) {
-                if viewModel.input.isEmpty {
-                    Text(config.placeholder)
-                        .font(theme.messageFont)
-                        .foregroundStyle(.secondary)
-                        .padding(.vertical, 8)
-                        .padding(.leading, 5)
-                        .allowsHitTesting(false)
-                }
-
-                // TextEditor, unlike TextField(axis: .vertical), NEVER treats
-                // Return as "submit" — Return always inserts a newline here,
-                // guaranteed. fixedSize(vertical:) + frame(min/maxHeight:) is
-                // the standard SwiftUI pattern for an auto-growing editor —
-                // UIKit reports TextEditor's real intrinsic content height
-                // through it, no manual measurement needed. Ditto Claude's
-                // iOS app: Return grows the composer, only the button below
-                // actually sends.
-                TextEditor(text: $viewModel.input)
-                    .font(theme.messageFont)
-                    .focused($focused)
-                    .scrollContentBackground(.hidden)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(minHeight: minHeight, maxHeight: maxHeight)
-            }
+            // Apple's own native multi-line-growing text input (iOS 16+).
+            // No .onSubmit here on purpose — attaching one hijacks the Return
+            // key into "send" instead of "insert a newline", which defeats
+            // axis: .vertical's whole point. Ditto Claude's iOS app: Return
+            // grows the composer, only the button below actually sends.
+            TextField(config.placeholder, text: $viewModel.input, axis: .vertical)
+                .lineLimit(1...5)
+                .font(theme.messageFont)
+                .focused($focused)
 
             Button {
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
